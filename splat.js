@@ -17,10 +17,10 @@ function setup() {
   imageMode(CENTER);
   
   blaster = {
-    x: width / 2,
-    y: height - 50,
+    x: mouseX,  // Initialize at mouse position
+    y: mouseY,
     angle: 0,
-    size: 40
+    size: 30    // Made blaster slightly smaller
   };
 }
 
@@ -70,7 +70,7 @@ function createSplat(x, y) {
   let newSplat = {
     x: x,
     y: y,
-    size: random(30, 60),
+    size: random(15, 30),  // Reduced size by 50%
     points: [],
     alpha: 255
   };
@@ -109,8 +109,8 @@ function drawSplats() {
 function mousePressed() {
   if (!gameOver && !loading && shotsLeft > 0) {
     yogurtBalls.push({
-      x: blaster.x,
-      y: blaster.y,
+      x: mouseX,
+      y: mouseY,
       angle: blaster.angle,
       speed: 10
     });
@@ -120,6 +120,9 @@ function mousePressed() {
 
 function mouseMoved() {
   if (!gameOver) {
+    // Smooth following of mouse
+    blaster.x = mouseX;
+    blaster.y = mouseY;
     blaster.angle = atan2(mouseY - blaster.y, mouseX - blaster.x);
   }
 }
