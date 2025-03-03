@@ -1,261 +1,205 @@
-// Yogurt Blaster Face Cover Game in P5.js (No Face Detection)
-
 let img;
-let blaster; // Now an object with x, y, angle, and color
+let blaster;
 let yogurtBalls = [];
 let splats = [];
 let score = 0;
 let startTime;
 let gameOver = false;
-let coverage = 0; // Percentage of image covered
-let targetCoverage = 20; // Goal: 20% coverage (updated)
-let coveredPixels = [];
-let totalPixels;
-let loading = true; // Add a loading state
+let coverage = 0;
+let targetCoverage = 25; // Target is 25% coverage
+let coveredAreas = []; // Track circular areas instead of pixels
+let loading = true;
 
 function preload() {
-  // Load the image (replace with your image URL or file)
-  img = loadImage('your_image.jpg', () => {
+  img = loadImage('target.jpg', () => {
     loading = false;
   });
 }
 
 function setup() {
-  createCanvas(windowWidth, windowHeight);
-  // Initialize blaster as an object (no image)
+  createCanvas(800, 600);
+  imageMode(CENTER);
+  
   blaster = {
     x: width / 2,
-    y: height / 2, // Start in the center
+    y: height - 50,
     angle: 0,
-    color: color(50, 50, 200), // Dark blue color for the blaster
-    size: 300, // Increased size by 1000% (30 * 10)
-    width: 100, // Increased width by 1000%
-    height: 200 // Increased height by 1000%
+    size: 40
   };
+  
   startTime = millis();
-
-  // Initialize coveredPixels array and totalPixels
-  totalPixels = width * height;
-  for (let x = 0; x < width; x++) {
-    coveredPixels[x] = [];
-    for (let y = 0; y < height; y++) {
-      coveredPixels[x][y] = false; // Initially, no pixels are covered
-    }
-  }
+  coveredAreas = [];
 }
 
 function draw() {
   background(220);
+  
   if (loading) {
-    // Display loading screen
-    fill(0);
-    textSize(40);
-    textAlign(CENTER, CENTER); // Center the text
-    text("Loading...", width / 2, height / 2);
-  } else {
-    // Display the image
-    image(img, 0, 0, width, height);
+    drawLoadingScreen();
+    return;
+  }
 
-    // Update blaster position to follow mouse
-    blaster.x = mouseX;
-    blaster.y = mouseY;
+  // Draw background image
+  image(img, width/2, height/2, width, height);
+  
+  // Update and draw yogurt balls
+  updateYogurtBalls();
+  
+  // Draw splats
+  drawSplats();
+  
+  // Draw blaster
+  drawBlaster();
+  
+  // Draw HUD
+  drawHUD();
+  
+  // Check win condition
+  checkGameOver();
+}
 
-    // Update and display yogurt balls
-    for (let i = yogurtBalls.length - 1; i >= 0; i--) {
-      yogurtBalls[i].update();
-      yogurtBalls[i].display();
-
-      // Check for collisions (now with any pixel) and create splats
-      if (checkCollision(yogurtBalls[i])) {
-        createSplats(yogurtBalls[i].x, yogurtBalls[i].y);
-        yogurtBalls.splice(i, 1); // Remove the yogurt ball
-        score++;
-      } else if (yogurtBalls[i].isOffScreen()) {
-        yogurtBalls.splice(i, 1); // Remove off-screen yogurt balls
-      }
+function updateYogurtBalls() {
+  for (let i = yogurtBalls.length - 1; i >= 0; i--) {
+    let ball = yogurtBalls[i];
+    ball.x += ball.speed * cos(ball.angle);
+    ball.y += ball.speed * sin(ball.angle);
+    
+    // Check collision with canvas
+    if (ball.x < 0 || ball.x > width || ball.y < 0 || ball.y > height) {
+      yogurtBalls.splice(i, 1);
+      continue;
     }
-
-    // Update and display splats
-    for (let i = splats.length - 1; i >= 0; i--) {
-      splats[i].update();
-      splats[i].display();
-      if (splats[i].isDone()) {
-        splats.splice(i, 1); // Remove finished splats
-      }
-    }
-
-    // Display the blaster
-    displayBlaster();
-
-    // Display score, timer, and coverage
-    fill(0);
-    textSize(20);
-    textAlign(LEFT, TOP);
-    text(`Score: ${score}`, 10, 30);
-
-    let elapsedTime = (millis() - startTime) / 1000;
-    text(`Time: ${elapsedTime.toFixed(1)}`, 10, 60);
-
-    text(`Coverage: ${coverage.toFixed(1)}%`, 10, 90);
-
-    // Game Over Logic
-    if (elapsedTime >= 30 || coverage >= targetCoverage) {
-      gameOver = true;
-    }
-
-    if (gameOver) {
-      fill(255, 0, 0);
-      textSize(40);
-      textAlign(CENTER, CENTER);
-      text('GAME OVER!', width / 2, height / 2);
-      textSize(20);
-      text(`Final score: ${score}`, width / 2, height / 2 + 30);
-      text(`Final Coverage: ${coverage.toFixed(1)}%`, width / 2, height / 2 + 60);
+    
+    // Draw ball
+    fill(255, 250, 220);
+    noStroke();
+    circle(ball.x, ball.y, 10);
+    
+    // Check collision with image area
+    if (ball.y < height - 100) { // Avoid bottom area where blaster is
+      createSplat(ball.x, ball.y);
+      yogurtBalls.splice(i, 1);
+      score++;
     }
   }
 }
 
-function mouseMoved() {
-  // Rotate the blaster towards the mouse
-  let dx = mouseX - blaster.x;
-  let dy = mouseY - blaster.y;
-  blaster.angle = atan2(dy, dx);
+function createSplat(x, y) {
+  let newSplat = {
+    x: x,
+    y: y,
+    size: random(50, 100),
+    coverage: random(0.02, 0.07), // 2-7% coverage
+    deformPoints: [], // Points to create irregular shape
+    alpha: 255,
+    lifespan: 255
+  };
+  
+  // Create irregular shape points
+  let points = floor(random(6, 12));
+  for (let i = 0; i < points; i++) {
+    newSplat.deformPoints.push({
+      angle: (TWO_PI / points) * i,
+      rad: random(0.7, 1.3) // Deformation factor
+    });
+  }
+  
+  splats.push(newSplat);
+  updateCoverage();
+}
+
+function drawSplats() {
+  for (let splat of splats) {
+    push();
+    translate(splat.x, splat.y);
+    fill(255, 250, 220, splat.alpha);
+    noStroke();
+    
+    beginShape();
+    for (let i = 0; i <= splat.deformPoints.length; i++) {
+      let point = splat.deformPoints[i % splat.deformPoints.length];
+      let rad = splat.size * point.rad;
+      let x = cos(point.angle) * rad;
+      let y = sin(point.angle) * rad;
+      curveVertex(x, y);
+    }
+    endShape();
+    pop();
+  }
+}
+
+function updateCoverage() {
+  let totalArea = width * height;
+  let coveredArea = 0;
+  
+  for (let splat of splats) {
+    coveredArea += (PI * splat.size * splat.size) * splat.coverage;
+  }
+  
+  coverage = (coveredArea / totalArea) * 100;
 }
 
 function mousePressed() {
   if (!gameOver && !loading) {
-    // Shoot a yogurt ball
-    let ball = new YogurtBall(blaster.x, blaster.y, blaster.angle);
-    yogurtBalls.push(ball);
+    yogurtBalls.push({
+      x: blaster.x,
+      y: blaster.y,
+      angle: blaster.angle,
+      speed: 10
+    });
   }
 }
 
-// --- Yogurt Ball Class ---
-class YogurtBall {
-  constructor(x, y, angle) {
-    this.x = x;
-    this.y = y;
-    this.angle = angle;
-    this.speed = 10;
-    this.size = 15;
-  }
-
-  update() {
-    this.x += this.speed * cos(this.angle);
-    this.y += this.speed * sin(this.angle);
-  }
-
-  display() {
-    fill(255, 250, 205); // Creamy yogurt color
-    noStroke();
-    ellipse(this.x, this.y, this.size);
-  }
-
-  isOffScreen() {
-    return this.x < 0 || this.x > width || this.y < 0 || this.y > height;
+function mouseMoved() {
+  if (!gameOver) {
+    blaster.angle = atan2(mouseY - blaster.y, mouseX - blaster.x);
   }
 }
 
-// --- Splat Class ---
-class Splat {
-  constructor(x, y) {
-    this.x = x;
-    this.y = y;
-    this.size = random(20, 60);
-    this.alpha = 255;
-    this.lifespan = 100;
-    this.coveragePercentage = random(2, 7);
-    this.hasUpdatedCoverage = false; // Add this flag
-  }
-
-  update() {
-    this.lifespan--;
-    this.alpha = map(this.lifespan, 100, 0, 255, 0);
-
-    // Only update coverage once when created
-    if (!this.hasUpdatedCoverage) {
-      let maxPixels = 100; // Limit maximum pixels per splat
-      let pixelsToCover = Math.min(
-        maxPixels,
-        Math.floor((this.coveragePercentage / 100) * (PI * this.size * this.size / 4))
-      );
-      
-      for (let i = 0; i < pixelsToCover; i++) {
-        let angle = random(TWO_PI);
-        let radius = random(this.size / 2);
-        let pixelX = Math.floor(this.x + radius * cos(angle));
-        let pixelY = Math.floor(this.y + radius * sin(angle));
-        
-        if (pixelX >= 0 && pixelX < width && pixelY >= 0 && pixelY < height) {
-          coveredPixels[pixelX][pixelY] = true;
-        }
-      }
-      
-      this.hasUpdatedCoverage = true;
-      calculateCoverage();
-    }
-  }
-
-  display() {
-    fill(255, 250, 205, this.alpha); // Creamy yogurt color with transparency
-    noStroke();
-    ellipse(this.x + random(-5, 5), this.y + random(-5, 5), this.size); // Jitter for splatter effect
-  }
-
-  isDone() {
-    return this.lifespan <= 0;
-  }
-}
-
-// --- Helper Functions ---
-
-function createSplats(x, y) {
-    for (let i = 0; i < 3; i++) { // Reduced from 5 to 3 splats
-        splats.push(new Splat(x + random(-10, 10), y + random(-10, 10)));
-    }
-}
-
-function checkCollision(ball) {
-  //check if the ball's coordinates are within the canvas
-  if (
-    ball.x >= 0 &&
-    ball.x < width &&
-    ball.y >= 0 &&
-    ball.y < height
-  ) {
-    return true;
-  }
-  return false;
-}
-
-function calculateCoverage() {
-  let sampleSize = 1000; // Sample a subset of pixels instead of checking every pixel
-  let coveredCount = 0;
-  
-  for (let i = 0; i < sampleSize; i++) {
-    let x = Math.floor(random(width));
-    let y = Math.floor(random(height));
-    if (coveredPixels[x][y]) {
-      coveredCount++;
-    }
-  }
-  
-  coverage = (coveredCount / sampleSize) * 100;
-}
-
-function displayBlaster() {
+function drawBlaster() {
   push();
   translate(blaster.x, blaster.y);
   rotate(blaster.angle);
-
-  // Draw a shape to represent the blaster
-  fill(blaster.color);
+  fill(100, 100, 255);
   noStroke();
-  beginShape();
-  vertex(-blaster.width / 2, -blaster.height / 2);
-  vertex(blaster.width / 2, -blaster.height / 2);
-  vertex(0, blaster.height / 2);
-  endShape(CLOSE);
-
+  rect(-blaster.size/2, -blaster.size/4, blaster.size, blaster.size/2);
   pop();
+}
+
+function drawHUD() {
+  fill(0);
+  noStroke();
+  textSize(20);
+  textAlign(LEFT);
+  
+  let elapsedTime = (millis() - startTime) / 1000;
+  text(`Time: ${elapsedTime.toFixed(1)}s`, 10, 30);
+  text(`Coverage: ${coverage.toFixed(1)}%`, 10, 60);
+  text(`Score: ${score}`, 10, 90);
+}
+
+function drawLoadingScreen() {
+  fill(0);
+  noStroke();
+  textSize(30);
+  textAlign(CENTER, CENTER);
+  text('Loading...', width/2, height/2);
+}
+
+function checkGameOver() {
+  if (coverage >= targetCoverage) {
+    gameOver = true;
+    let finalTime = (millis() - startTime) / 1000;
+    
+    fill(0, 0, 0, 150);
+    rect(0, 0, width, height);
+    
+    fill(255);
+    textSize(40);
+    textAlign(CENTER, CENTER);
+    text('Victory!', width/2, height/2 - 40);
+    textSize(24);
+    text(`Time: ${finalTime.toFixed(1)} seconds`, width/2, height/2 + 10);
+    text(`Final Coverage: ${coverage.toFixed(1)}%`, width/2, height/2 + 40);
+  }
 }
