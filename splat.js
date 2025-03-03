@@ -11,14 +11,17 @@ let coverage = 0; // Percentage of image covered
 let targetCoverage = 20; // Goal: 20% coverage (updated)
 let coveredPixels = [];
 let totalPixels;
+let loading = true; // Add a loading state
 
 function preload() {
   // Load the image (replace with your image URL or file)
-  img = loadImage('your_image.jpg');
+  img = loadImage('your_image.jpg',() => {
+    loading = false;
+  });
 }
 
 function setup() {
-  createCanvas(img.width, img.height);
+  createCanvas(windowWidth, windowHeight);
   // Initialize blaster as an object (no image)
   blaster = {
     x: width / 2,
@@ -43,63 +46,72 @@ function setup() {
 
 function draw() {
   background(220);
-
-  // Display the image
-  image(img, 0, 0);
-
-  // Update blaster position to follow mouse
-  blaster.x = mouseX;
-  blaster.y = mouseY;
-
-  // Update and display yogurt balls
-  for (let i = yogurtBalls.length - 1; i >= 0; i--) {
-    yogurtBalls[i].update();
-    yogurtBalls[i].display();
-
-    // Check for collisions (now with any pixel) and create splats
-    if (checkCollision(yogurtBalls[i])) {
-      createSplats(yogurtBalls[i].x, yogurtBalls[i].y);
-      yogurtBalls.splice(i, 1); // Remove the yogurt ball
-      score++;
-    } else if (yogurtBalls[i].isOffScreen()) {
-      yogurtBalls.splice(i, 1); // Remove off-screen yogurt balls
-    }
-  }
-
-  // Update and display splats
-  for (let i = splats.length - 1; i >= 0; i--) {
-    splats[i].update();
-    splats[i].display();
-    if (splats[i].isDone()) {
-      splats.splice(i, 1); // Remove finished splats
-    }
-  }
-
-  // Display the blaster
-  displayBlaster();
-
-  // Display score, timer, and coverage
-  fill(0);
-  textSize(20);
-  text(`Score: ${score}`, 10, 30);
-
-  let elapsedTime = (millis() - startTime) / 1000;
-  text(`Time: ${elapsedTime.toFixed(1)}`, 10, 60);
-
-  text(`Coverage: ${coverage.toFixed(1)}%`, 10, 90);
-
-  // Game Over Logic
-  if (elapsedTime >= 30 || coverage >= targetCoverage) {
-    gameOver = true;
-  }
-
-  if (gameOver) {
-    fill(255, 0, 0);
+  if (loading) {
+    // Display loading screen
+    fill(0);
     textSize(40);
-    text('GAME OVER!', width / 2 - 100, height / 2);
+    textAlign(CENTER, CENTER); // Center the text
+    text("Loading...", width / 2, height / 2);
+  } else {
+    // Display the image
+    image(img, 0, 0, width, height);
+    
+    // Update blaster position to follow mouse
+    blaster.x = mouseX;
+    blaster.y = mouseY;
+
+    // Update and display yogurt balls
+    for (let i = yogurtBalls.length - 1; i >= 0; i--) {
+      yogurtBalls[i].update();
+      yogurtBalls[i].display();
+
+      // Check for collisions (now with any pixel) and create splats
+      if (checkCollision(yogurtBalls[i])) {
+        createSplats(yogurtBalls[i].x, yogurtBalls[i].y);
+        yogurtBalls.splice(i, 1); // Remove the yogurt ball
+        score++;
+      } else if (yogurtBalls[i].isOffScreen()) {
+        yogurtBalls.splice(i, 1); // Remove off-screen yogurt balls
+      }
+    }
+
+    // Update and display splats
+    for (let i = splats.length - 1; i >= 0; i--) {
+      splats[i].update();
+      splats[i].display();
+      if (splats[i].isDone()) {
+        splats.splice(i, 1); // Remove finished splats
+      }
+    }
+
+    // Display the blaster
+    displayBlaster();
+
+    // Display score, timer, and coverage
+    fill(0);
     textSize(20);
-    text(`Final score: ${score}`, width / 2 - 60, height / 2 + 30);
-    text(`Final Coverage: ${coverage.toFixed(1)}%`, width / 2 - 80, height / 2 + 60);
+    textAlign(LEFT, TOP);
+    text(`Score: ${score}`, 10, 30);
+
+    let elapsedTime = (millis() - startTime) / 1000;
+    text(`Time: ${elapsedTime.toFixed(1)}`, 10, 60);
+
+    text(`Coverage: ${coverage.toFixed(1)}%`, 10, 90);
+
+    // Game Over Logic
+    if (elapsedTime >= 30 || coverage >= targetCoverage) {
+      gameOver = true;
+    }
+
+    if (gameOver) {
+      fill(255, 0, 0);
+      textSize(40);
+      textAlign(CENTER, CENTER);
+      text('GAME OVER!', width / 2, height / 2);
+      textSize(20);
+      text(`Final score: ${score}`, width / 2, height / 2 + 30);
+      text(`Final Coverage: ${coverage.toFixed(1)}%`, width / 2, height / 2 + 60);
+    }
   }
 }
 
@@ -111,7 +123,7 @@ function mouseMoved() {
 }
 
 function mousePressed() {
-  if (!gameOver) {
+  if (!gameOver && !loading) {
     // Shoot a yogurt ball
     let ball = new YogurtBall(blaster.x, blaster.y, blaster.angle);
     yogurtBalls.push(ball);
