@@ -15,24 +15,25 @@ function preload() {
 function setup() {
   createCanvas(800, 600);
   imageMode(CENTER);
-  
+
   blaster = {
-    x: mouseX,  // Initialize at mouse position
+    x: mouseX, // Initialize at mouse position
     y: mouseY,
     angle: 0,
-    size: 30    // Made blaster slightly smaller
+    size: 20, // Made blaster smaller
+    color: color(100, 100, 255)
   };
 }
 
 function draw() {
   background(220);
-  
+
   if (loading) {
     drawLoadingScreen();
     return;
   }
 
-  image(img, width/2, height/2, width, height);
+  image(img, width / 2, height / 2, width, height);
   updateYogurtBalls();
   drawSplats();
   drawBlaster();
@@ -45,36 +46,44 @@ function updateYogurtBalls() {
     let ball = yogurtBalls[i];
     ball.x += ball.speed * cos(ball.angle);
     ball.y += ball.speed * sin(ball.angle);
-    
+
     if (ball.x < 0 || ball.x > width || ball.y < 0 || ball.y > height) {
       yogurtBalls.splice(i, 1);
       continue;
     }
-    
+
     fill(255, 250, 220);
     noStroke();
     circle(ball.x, ball.y, 10);
-    
-    if (ball.y < height - 100) {
+
+    // Create splat upon impact with target
+    if (checkCollisionWithTarget(ball.x, ball.y)) { //New Collision Detection
       createSplat(ball.x, ball.y);
       yogurtBalls.splice(i, 1);
     }
   }
 }
 
+function checkCollisionWithTarget(x, y) {
+  // Here, we're checking if the yogurt ball hits anywhere on the screen
+  //which can be adjusted.
+  return true;
+}
+
 function createSplat(x, y) {
   if (splats.length > 30) {
     splats.shift(); // Remove oldest splat if too many
   }
-  
+
   let newSplat = {
     x: x,
     y: y,
-    size: random(15, 30),  // Reduced size by 50%
+    size: random(5, 10), // Drastically reduced splat size
     points: [],
-    alpha: 255
+    alpha: 255,
+    lifespan: 100 // Set a lifespan for splats
   };
-  
+
   let numPoints = floor(random(5, 8));
   for (let i = 0; i < numPoints; i++) {
     newSplat.points.push({
@@ -82,35 +91,42 @@ function createSplat(x, y) {
       rad: random(0.8, 1.2)
     });
   }
-  
+
   splats.push(newSplat);
 }
 
 function drawSplats() {
-  for (let splat of splats) {
-    push();
-    translate(splat.x, splat.y);
-    fill(255, 250, 220, splat.alpha);
-    noStroke();
-    
-    beginShape();
-    for (let i = 0; i <= splat.points.length; i++) {
-      let point = splat.points[i % splat.points.length];
-      let rad = splat.size * point.rad;
-      let x = cos(point.angle) * rad;
-      let y = sin(point.angle) * rad;
-      curveVertex(x, y);
+  for (let i = splats.length - 1; i >= 0; i--) {
+    let splat = splats[i];
+    splat.lifespan--;
+
+    if (splat.lifespan <= 0) {
+        splats.splice(i, 1);
+    } else {
+      push();
+      translate(splat.x, splat.y);
+      fill(255, 250, 220, splat.alpha);
+      noStroke();
+
+      beginShape();
+      for (let j = 0; j <= splat.points.length; j++) {
+        let point = splat.points[j % splat.points.length];
+        let rad = splat.size * point.rad;
+        let x = cos(point.angle) * rad;
+        let y = sin(point.angle) * rad;
+        curveVertex(x, y);
+      }
+      endShape(CLOSE);
+      pop();
     }
-    endShape(CLOSE);
-    pop();
   }
 }
 
 function mousePressed() {
   if (!gameOver && !loading && shotsLeft > 0) {
     yogurtBalls.push({
-      x: mouseX,
-      y: mouseY,
+      x: blaster.x, // Start from the blaster's position
+      y: blaster.y,
       angle: blaster.angle,
       speed: 10
     });
@@ -131,9 +147,9 @@ function drawBlaster() {
   push();
   translate(blaster.x, blaster.y);
   rotate(blaster.angle);
-  fill(100, 100, 255);
+  fill(blaster.color);
   noStroke();
-  rect(-blaster.size/2, -blaster.size/4, blaster.size, blaster.size/2);
+  rect(-blaster.size / 2, -blaster.size / 4, blaster.size, blaster.size / 2);
   pop();
 }
 
@@ -150,19 +166,19 @@ function drawLoadingScreen() {
   noStroke();
   textSize(30);
   textAlign(CENTER, CENTER);
-  text('Loading...', width/2, height/2);
+  text('Loading...', width / 2, height / 2);
 }
 
 function checkGameOver() {
   if (shotsLeft <= 0 && yogurtBalls.length === 0) {
     gameOver = true;
-    
+
     fill(0, 0, 0, 150);
     rect(0, 0, width, height);
-    
+
     fill(255);
     textSize(40);
     textAlign(CENTER, CENTER);
-    text('Game Over!', width/2, height/2);
+    text('Game Over!', width / 2, height / 2);
   }
 }
