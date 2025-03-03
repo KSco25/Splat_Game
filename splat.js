@@ -163,36 +163,36 @@ class Splat {
     this.y = y;
     this.size = random(20, 60);
     this.alpha = 255;
-    this.lifespan = 100; // Number of frames to exist
-    this.pixelsCovered = [];
-    this.coveragePercentage = random(2, 7); // Random coverage between 2% and 7%
+    this.lifespan = 100;
+    this.coveragePercentage = random(2, 7);
+    this.hasUpdatedCoverage = false; // Add this flag
   }
 
   update() {
     this.lifespan--;
     this.alpha = map(this.lifespan, 100, 0, 255, 0);
 
-    // Mark pixels as covered based on percentage (only once when created)
-    if (this.lifespan === 99) { // Do this only on first update
-      let area = PI * (this.size / 2) * (this.size / 2); // Approximate area of splat
-      let pixelsToCover = Math.floor((this.coveragePercentage / 100) * area);
-      let count = 0;
-      let maxAttempts = pixelsToCover * 2; // Prevent infinite loops
-      let attempts = 0;
-
-      while (count < pixelsToCover && attempts < maxAttempts) {
-        let pixelX = Math.floor(random(this.x - this.size / 2, this.x + this.size / 2));
-        let pixelY = Math.floor(random(this.y - this.size / 2, this.y + this.size / 2));
+    // Only update coverage once when created
+    if (!this.hasUpdatedCoverage) {
+      let maxPixels = 100; // Limit maximum pixels per splat
+      let pixelsToCover = Math.min(
+        maxPixels,
+        Math.floor((this.coveragePercentage / 100) * (PI * this.size * this.size / 4))
+      );
+      
+      for (let i = 0; i < pixelsToCover; i++) {
+        let angle = random(TWO_PI);
+        let radius = random(this.size / 2);
+        let pixelX = Math.floor(this.x + radius * cos(angle));
+        let pixelY = Math.floor(this.y + radius * sin(angle));
         
         if (pixelX >= 0 && pixelX < width && pixelY >= 0 && pixelY < height) {
-          if (!coveredPixels[pixelX][pixelY]) {
-            coveredPixels[pixelX][pixelY] = true;
-            count++;
-          }
+          coveredPixels[pixelX][pixelY] = true;
         }
-        attempts++;
       }
-      calculateCoverage(); // Update coverage percentage only once per splat
+      
+      this.hasUpdatedCoverage = true;
+      calculateCoverage();
     }
   }
 
@@ -210,7 +210,7 @@ class Splat {
 // --- Helper Functions ---
 
 function createSplats(x, y) {
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 3; i++) { // Reduced from 5 to 3 splats
         splats.push(new Splat(x + random(-10, 10), y + random(-10, 10)));
     }
 }
@@ -229,15 +229,18 @@ function checkCollision(ball) {
 }
 
 function calculateCoverage() {
-  let numCovered = 0;
-  for (let x = 0; x < width; x++) {
-    for (let y = 0; y < height; y++) {
-      if (coveredPixels[x][y]) {
-        numCovered++;
-      }
+  let sampleSize = 1000; // Sample a subset of pixels instead of checking every pixel
+  let coveredCount = 0;
+  
+  for (let i = 0; i < sampleSize; i++) {
+    let x = Math.floor(random(width));
+    let y = Math.floor(random(height));
+    if (coveredPixels[x][y]) {
+      coveredCount++;
     }
   }
-  coverage = (numCovered / totalPixels) * 100;
+  
+  coverage = (coveredCount / sampleSize) * 100;
 }
 
 function displayBlaster() {
