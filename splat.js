@@ -5,6 +5,8 @@ let splats = [];
 let shotsLeft = 10;
 let gameOver = false;
 let loading = true;
+let totalPixels; // Add totalPixels variable
+let coveredPixels = [];
 
 function preload() {
   img = loadImage('target.jpg', () => {
@@ -20,9 +22,17 @@ function setup() {
     x: mouseX, // Initialize at mouse position
     y: mouseY,
     angle: 0,
-    size: 20, // Made blaster smaller
+    size: 20,
     color: color(100, 100, 255)
   };
+  totalPixels = width * height; // Calculate total pixels in setup
+  
+  for (let x = 0; x < width; x++) {
+      coveredPixels[x] = [];
+      for (let y = 0; y < height; y++) {
+        coveredPixels[x][y] = false; 
+      }
+  }
 }
 
 function draw() {
@@ -65,34 +75,43 @@ function updateYogurtBalls() {
 }
 
 function checkCollisionWithTarget(x, y) {
-  // Here, we're checking if the yogurt ball hits anywhere on the screen
-  //which can be adjusted.
   return true;
 }
 
 function createSplat(x, y) {
-  if (splats.length > 30) {
-    splats.shift(); // Remove oldest splat if too many
-  }
+    if (splats.length > 30) {
+        splats.shift();
+    }
 
-  let newSplat = {
-    x: x,
-    y: y,
-    size: random(5, 10), // Drastically reduced splat size
-    points: [],
-    alpha: 255,
-    lifespan: 100 // Set a lifespan for splats
-  };
+    let newSplat = {
+        x: x,
+        y: y,
+        size: random(5, 10),
+        points: [],
+        alpha: 255,
+        lifespan: 100,
+        pixelsCovered: Math.floor(totalPixels * 0.02)
+    };
+    
+    let pixelsCovered = 0;
+    while (pixelsCovered < newSplat.pixelsCovered) {
+      let pointX = Math.floor(random(newSplat.x - newSplat.size, newSplat.x + newSplat.size));
+      let pointY = Math.floor(random(newSplat.y - newSplat.size, newSplat.y + newSplat.size));
+      if(pointX >= 0 && pointX < width && pointY >= 0 && pointY < height && !coveredPixels[pointX][pointY]){
+        coveredPixels[pointX][pointY] = true;
+        pixelsCovered++
+      }
+    }
 
-  let numPoints = floor(random(5, 8));
-  for (let i = 0; i < numPoints; i++) {
-    newSplat.points.push({
-      angle: (TWO_PI / numPoints) * i,
-      rad: random(0.8, 1.2)
-    });
-  }
+    let numPoints = floor(random(5, 8));
+    for (let i = 0; i < numPoints; i++) {
+      newSplat.points.push({
+        angle: (TWO_PI / numPoints) * i,
+        rad: random(0.8, 1.2)
+      });
+    }
 
-  splats.push(newSplat);
+    splats.push(newSplat);
 }
 
 function drawSplats() {
