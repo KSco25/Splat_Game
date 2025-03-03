@@ -125,8 +125,8 @@ function mouseMoved() {
 function mousePressed() {
   if (!gameOver && !loading) {
     // Shoot a yogurt ball
-      let ball = new YogurtBall(blaster.x, blaster.y, blaster.angle);
-      yogurtBalls.push(ball);
+    let ball = new YogurtBall(blaster.x, blaster.y, blaster.angle);
+    yogurtBalls.push(ball);
   }
 }
 
@@ -172,26 +172,27 @@ class Splat {
     this.lifespan--;
     this.alpha = map(this.lifespan, 100, 0, 255, 0);
 
-    // Mark pixels as covered based on percentage
-    if (this.lifespan > 0) {
-      let pixelsToCover = Math.floor((this.coveragePercentage / 100) * totalPixels);
+    // Mark pixels as covered based on percentage (only once when created)
+    if (this.lifespan === 99) { // Do this only on first update
+      let area = PI * (this.size / 2) * (this.size / 2); // Approximate area of splat
+      let pixelsToCover = Math.floor((this.coveragePercentage / 100) * area);
       let count = 0;
+      let maxAttempts = pixelsToCover * 2; // Prevent infinite loops
+      let attempts = 0;
 
-      while (count < pixelsToCover) {
+      while (count < pixelsToCover && attempts < maxAttempts) {
         let pixelX = Math.floor(random(this.x - this.size / 2, this.x + this.size / 2));
         let pixelY = Math.floor(random(this.y - this.size / 2, this.y + this.size / 2));
-        if (
-          pixelX >= 0 &&
-          pixelX < width &&
-          pixelY >= 0 &&
-          pixelY < height &&
-          !coveredPixels[pixelX][pixelY]
-        ) {
-          coveredPixels[pixelX][pixelY] = true;
-          count++;
+        
+        if (pixelX >= 0 && pixelX < width && pixelY >= 0 && pixelY < height) {
+          if (!coveredPixels[pixelX][pixelY]) {
+            coveredPixels[pixelX][pixelY] = true;
+            count++;
+          }
         }
+        attempts++;
       }
-      calculateCoverage(); // Update coverage percentage
+      calculateCoverage(); // Update coverage percentage only once per splat
     }
   }
 
@@ -209,9 +210,9 @@ class Splat {
 // --- Helper Functions ---
 
 function createSplats(x, y) {
-  for (let i = 0; i < 5; i++) {
-    splats.push(new Splat(x + random(-10, 10), y + random(-10, 10)));
-  }
+    for (let i = 0; i < 5; i++) {
+        splats.push(new Splat(x + random(-10, 10), y + random(-10, 10)));
+    }
 }
 
 function checkCollision(ball) {
