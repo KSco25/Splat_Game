@@ -1,8 +1,7 @@
 // Yogurt Blaster Face Cover Game in P5.js (No Face Detection)
 
 let img;
-let blasterX, blasterY;
-let blasterAngle = 0;
+let blaster; // Now an object with x, y, angle, and image
 let yogurtBalls = [];
 let splats = [];
 let score = 0;
@@ -12,16 +11,24 @@ let coverage = 0; // Percentage of image covered
 let targetCoverage = 50; // Goal: 50% coverage
 let coveredPixels = [];
 let totalPixels;
+let blasterImg;
 
 function preload() {
   // Load the image (replace with your image URL or file)
   img = loadImage('your_image.jpg');
+  blasterImg = loadImage('blaster_sprite.png'); // Load the blaster sprite
 }
 
 function setup() {
   createCanvas(img.width, img.height);
-  blasterX = width / 2;
-  blasterY = height;
+  // Initialize blaster as an object
+  blaster = {
+    x: width / 2,
+    y: height / 2, // Start in the center
+    angle: 0,
+    img: blasterImg, //assign the image
+    size: 60
+  };
   startTime = millis();
 
   // Initialize coveredPixels array and totalPixels
@@ -39,6 +46,10 @@ function draw() {
 
   // Display the image
   image(img, 0, 0);
+
+  // Update blaster position to follow mouse
+  blaster.x = mouseX;
+  blaster.y = mouseY;
 
   // Update and display yogurt balls
   for (let i = yogurtBalls.length - 1; i >= 0; i--) {
@@ -65,13 +76,7 @@ function draw() {
   }
 
   // Display the blaster
-  push();
-  translate(blasterX, blasterY);
-  rotate(blasterAngle);
-  fill(100);
-  rect(-10, -5, 20, 10); // Blaster body
-  rect(0, -30, 5, 30); // Blaster barrel
-  pop();
+  displayBlaster();
 
   // Display score, timer, and coverage
   fill(0);
@@ -100,15 +105,15 @@ function draw() {
 
 function mouseMoved() {
   // Rotate the blaster towards the mouse
-  let dx = mouseX - blasterX;
-  let dy = mouseY - blasterY;
-  blasterAngle = atan2(dy, dx);
+  let dx = mouseX - blaster.x;
+  let dy = mouseY - blaster.y;
+  blaster.angle = atan2(dy, dx);
 }
 
 function mousePressed() {
   if (!gameOver) {
     // Shoot a yogurt ball
-    let ball = new YogurtBall(blasterX, blasterY, blasterAngle);
+    let ball = new YogurtBall(blaster.x, blaster.y, blaster.angle);
     yogurtBalls.push(ball);
   }
 }
@@ -148,18 +153,21 @@ class Splat {
     this.alpha = 255;
     this.lifespan = 100; // Number of frames to exist
     this.pixelsCovered = [];
+    this.coveragePercentage = random(2, 7); // Random coverage between 2% and 7%
   }
 
   update() {
     this.lifespan--;
     this.alpha = map(this.lifespan, 100, 0, 255, 0);
 
-    // Mark pixels as covered
+    // Mark pixels as covered based on percentage
     if (this.lifespan > 0) {
-      for (let x = -this.size / 2; x < this.size / 2; x++) {
-        for (let y = -this.size / 2; y < this.size / 2; y++) {
-          let pixelX = Math.floor(this.x + x);
-          let pixelY = Math.floor(this.y + y);
+      let pixelsToCover = Math.floor((this.coveragePercentage / 100) * totalPixels);
+      let count = 0;
+
+      while (count < pixelsToCover) {
+          let pixelX = Math.floor(random(this.x-this.size/2,this.x+this.size/2));
+          let pixelY = Math.floor(random(this.y-this.size/2,this.y+this.size/2));
           if (
             pixelX >= 0 &&
             pixelX < width &&
@@ -168,8 +176,8 @@ class Splat {
             !coveredPixels[pixelX][pixelY]
           ) {
             coveredPixels[pixelX][pixelY] = true;
+            count++;
           }
-        }
       }
       calculateCoverage(); // Update coverage percentage
     }
@@ -217,4 +225,13 @@ function calculateCoverage() {
     }
   }
   coverage = (numCovered / totalPixels) * 100;
+}
+
+function displayBlaster() {
+  push();
+  translate(blaster.x, blaster.y);
+  rotate(blaster.angle);
+  imageMode(CENTER); //to ensure the blaster rotates around its center
+  image(blaster.img, 0, 0,blaster.size,blaster.size);
+  pop();
 }
