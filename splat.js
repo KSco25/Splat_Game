@@ -1,33 +1,33 @@
 // Yogurt Blaster Face Cover Game in P5.js (No Face Detection)
 
 let img;
-let blaster; // Now an object with x, y, angle, and image
+let blaster; // Now an object with x, y, angle, and color
 let yogurtBalls = [];
 let splats = [];
 let score = 0;
 let startTime;
 let gameOver = false;
 let coverage = 0; // Percentage of image covered
-let targetCoverage = 50; // Goal: 50% coverage
+let targetCoverage = 20; // Goal: 20% coverage (updated)
 let coveredPixels = [];
 let totalPixels;
-let blasterImg;
 
 function preload() {
   // Load the image (replace with your image URL or file)
   img = loadImage('your_image.jpg');
-  blasterImg = loadImage('blaster_sprite.png'); // Load the blaster sprite
 }
 
 function setup() {
   createCanvas(img.width, img.height);
-  // Initialize blaster as an object
+  // Initialize blaster as an object (no image)
   blaster = {
     x: width / 2,
     y: height / 2, // Start in the center
     angle: 0,
-    img: blasterImg, //assign the image
-    size: 60
+    color: color(50, 50, 200), // Dark blue color for the blaster
+    size: 30, // Reduced the size, now a shape.
+    width: 10, // the width of the base of the blaster
+    height: 20 // the height of the blaster
   };
   startTime = millis();
 
@@ -231,7 +231,15 @@ function displayBlaster() {
   push();
   translate(blaster.x, blaster.y);
   rotate(blaster.angle);
-  imageMode(CENTER); //to ensure the blaster rotates around its center
-  image(blaster.img, 0, 0,blaster.size,blaster.size);
+
+  // Draw a shape to represent the blaster
+  fill(blaster.color);
+  noStroke();
+  beginShape();
+  vertex(-blaster.width/2, -blaster.height/2);
+  vertex(blaster.width/2, -blaster.height/2);
+  vertex(0, blaster.height/2);
+  endShape(CLOSE);
+
   pop();
 }
