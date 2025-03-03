@@ -15,7 +15,7 @@ let loading = true; // Add a loading state
 
 function preload() {
   // Load the image (replace with your image URL or file)
-  img = loadImage('your_image.jpg',() => {
+  img = loadImage('your_image.jpg', () => {
     loading = false;
   });
 }
@@ -28,9 +28,9 @@ function setup() {
     y: height / 2, // Start in the center
     angle: 0,
     color: color(50, 50, 200), // Dark blue color for the blaster
-    size: 30, // Reduced the size, now a shape.
-    width: 10, // the width of the base of the blaster
-    height: 20 // the height of the blaster
+    size: 300, // Increased size by 1000% (30 * 10)
+    width: 100, // Increased width by 1000%
+    height: 200 // Increased height by 1000%
   };
   startTime = millis();
 
@@ -55,7 +55,7 @@ function draw() {
   } else {
     // Display the image
     image(img, 0, 0, width, height);
-    
+
     // Update blaster position to follow mouse
     blaster.x = mouseX;
     blaster.y = mouseY;
@@ -125,8 +125,8 @@ function mouseMoved() {
 function mousePressed() {
   if (!gameOver && !loading) {
     // Shoot a yogurt ball
-    let ball = new YogurtBall(blaster.x, blaster.y, blaster.angle);
-    yogurtBalls.push(ball);
+      let ball = new YogurtBall(blaster.x, blaster.y, blaster.angle);
+      yogurtBalls.push(ball);
   }
 }
 
@@ -178,18 +178,18 @@ class Splat {
       let count = 0;
 
       while (count < pixelsToCover) {
-          let pixelX = Math.floor(random(this.x-this.size/2,this.x+this.size/2));
-          let pixelY = Math.floor(random(this.y-this.size/2,this.y+this.size/2));
-          if (
-            pixelX >= 0 &&
-            pixelX < width &&
-            pixelY >= 0 &&
-            pixelY < height &&
-            !coveredPixels[pixelX][pixelY]
-          ) {
-            coveredPixels[pixelX][pixelY] = true;
-            count++;
-          }
+        let pixelX = Math.floor(random(this.x - this.size / 2, this.x + this.size / 2));
+        let pixelY = Math.floor(random(this.y - this.size / 2, this.y + this.size / 2));
+        if (
+          pixelX >= 0 &&
+          pixelX < width &&
+          pixelY >= 0 &&
+          pixelY < height &&
+          !coveredPixels[pixelX][pixelY]
+        ) {
+          coveredPixels[pixelX][pixelY] = true;
+          count++;
+        }
       }
       calculateCoverage(); // Update coverage percentage
     }
@@ -248,9 +248,9 @@ function displayBlaster() {
   fill(blaster.color);
   noStroke();
   beginShape();
-  vertex(-blaster.width/2, -blaster.height/2);
-  vertex(blaster.width/2, -blaster.height/2);
-  vertex(0, blaster.height/2);
+  vertex(-blaster.width / 2, -blaster.height / 2);
+  vertex(blaster.width / 2, -blaster.height / 2);
+  vertex(0, blaster.height / 2);
   endShape(CLOSE);
 
   pop();
