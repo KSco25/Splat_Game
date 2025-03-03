@@ -2,12 +2,8 @@ let img;
 let blaster;
 let yogurtBalls = [];
 let splats = [];
-let score = 0;
-let startTime;
+let shotsLeft = 10;
 let gameOver = false;
-let coverage = 0;
-let targetCoverage = 25; // Target is 25% coverage
-let coveredAreas = []; // Track circular areas instead of pixels
 let loading = true;
 
 function preload() {
@@ -26,9 +22,6 @@ function setup() {
     angle: 0,
     size: 40
   };
-  
-  startTime = millis();
-  coveredAreas = [];
 }
 
 function draw() {
@@ -39,22 +32,11 @@ function draw() {
     return;
   }
 
-  // Draw background image
   image(img, width/2, height/2, width, height);
-  
-  // Update and draw yogurt balls
   updateYogurtBalls();
-  
-  // Draw splats
   drawSplats();
-  
-  // Draw blaster
   drawBlaster();
-  
-  // Draw HUD
   drawHUD();
-  
-  // Check win condition
   checkGameOver();
 }
 
@@ -64,48 +46,44 @@ function updateYogurtBalls() {
     ball.x += ball.speed * cos(ball.angle);
     ball.y += ball.speed * sin(ball.angle);
     
-    // Check collision with canvas
     if (ball.x < 0 || ball.x > width || ball.y < 0 || ball.y > height) {
       yogurtBalls.splice(i, 1);
       continue;
     }
     
-    // Draw ball
     fill(255, 250, 220);
     noStroke();
     circle(ball.x, ball.y, 10);
     
-    // Check collision with image area
-    if (ball.y < height - 100) { // Avoid bottom area where blaster is
+    if (ball.y < height - 100) {
       createSplat(ball.x, ball.y);
       yogurtBalls.splice(i, 1);
-      score++;
     }
   }
 }
 
 function createSplat(x, y) {
+  if (splats.length > 30) {
+    splats.shift(); // Remove oldest splat if too many
+  }
+  
   let newSplat = {
     x: x,
     y: y,
-    size: random(50, 100),
-    coverage: random(0.02, 0.07), // 2-7% coverage
-    deformPoints: [], // Points to create irregular shape
-    alpha: 255,
-    lifespan: 255
+    size: random(30, 60),
+    points: [],
+    alpha: 255
   };
   
-  // Create irregular shape points
-  let points = floor(random(6, 12));
-  for (let i = 0; i < points; i++) {
-    newSplat.deformPoints.push({
-      angle: (TWO_PI / points) * i,
-      rad: random(0.7, 1.3) // Deformation factor
+  let numPoints = floor(random(5, 8));
+  for (let i = 0; i < numPoints; i++) {
+    newSplat.points.push({
+      angle: (TWO_PI / numPoints) * i,
+      rad: random(0.8, 1.2)
     });
   }
   
   splats.push(newSplat);
-  updateCoverage();
 }
 
 function drawSplats() {
@@ -116,37 +94,27 @@ function drawSplats() {
     noStroke();
     
     beginShape();
-    for (let i = 0; i <= splat.deformPoints.length; i++) {
-      let point = splat.deformPoints[i % splat.deformPoints.length];
+    for (let i = 0; i <= splat.points.length; i++) {
+      let point = splat.points[i % splat.points.length];
       let rad = splat.size * point.rad;
       let x = cos(point.angle) * rad;
       let y = sin(point.angle) * rad;
       curveVertex(x, y);
     }
-    endShape();
+    endShape(CLOSE);
     pop();
   }
 }
 
-function updateCoverage() {
-  let totalArea = width * height;
-  let coveredArea = 0;
-  
-  for (let splat of splats) {
-    coveredArea += (PI * splat.size * splat.size) * splat.coverage;
-  }
-  
-  coverage = (coveredArea / totalArea) * 100;
-}
-
 function mousePressed() {
-  if (!gameOver && !loading) {
+  if (!gameOver && !loading && shotsLeft > 0) {
     yogurtBalls.push({
       x: blaster.x,
       y: blaster.y,
       angle: blaster.angle,
       speed: 10
     });
+    shotsLeft--;
   }
 }
 
@@ -171,11 +139,7 @@ function drawHUD() {
   noStroke();
   textSize(20);
   textAlign(LEFT);
-  
-  let elapsedTime = (millis() - startTime) / 1000;
-  text(`Time: ${elapsedTime.toFixed(1)}s`, 10, 30);
-  text(`Coverage: ${coverage.toFixed(1)}%`, 10, 60);
-  text(`Score: ${score}`, 10, 90);
+  text(`Shots Left: ${shotsLeft}`, 10, 30);
 }
 
 function drawLoadingScreen() {
@@ -187,9 +151,8 @@ function drawLoadingScreen() {
 }
 
 function checkGameOver() {
-  if (coverage >= targetCoverage) {
+  if (shotsLeft <= 0 && yogurtBalls.length === 0) {
     gameOver = true;
-    let finalTime = (millis() - startTime) / 1000;
     
     fill(0, 0, 0, 150);
     rect(0, 0, width, height);
@@ -197,9 +160,6 @@ function checkGameOver() {
     fill(255);
     textSize(40);
     textAlign(CENTER, CENTER);
-    text('Victory!', width/2, height/2 - 40);
-    textSize(24);
-    text(`Time: ${finalTime.toFixed(1)} seconds`, width/2, height/2 + 10);
-    text(`Final Coverage: ${coverage.toFixed(1)}%`, width/2, height/2 + 40);
+    text('Game Over!', width/2, height/2);
   }
 }
