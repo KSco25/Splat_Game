@@ -1,6 +1,3 @@
-import React, { useEffect, useRef } from 'react';
-import Sketch from 'react-p5';
-
 const YogurtBlasterGame = () => {
   const blasterRef = useRef({
     x: 0,
