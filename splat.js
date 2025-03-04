@@ -1,203 +1,96 @@
-let img;
+let bgImage;
 let blaster;
-let yogurtBalls = [];
-let splats = [];
-let shotsLeft = 10;
+let splatters = [];
+let shotsRemaining = 10;
 let gameOver = false;
-let loading = true;
-let totalPixels; // Add totalPixels variable
-let coveredPixels = [];
 
 function preload() {
-  img = loadImage('target.jpg', () => {
-    loading = false;
-  });
+    bgImage = loadImage('your_image.jpg');
 }
 
 function setup() {
-  createCanvas(800, 600);
-  imageMode(CENTER);
-
-  blaster = {
-    x: mouseX, // Initialize at mouse position
-    y: mouseY,
-    angle: 0,
-    size: 20,
-    color: color(100, 100, 255)
-  };
-  totalPixels = width * height; // Calculate total pixels in setup
-  
-  for (let x = 0; x < width; x++) {
-      coveredPixels[x] = [];
-      for (let y = 0; y < height; y++) {
-        coveredPixels[x][y] = false; 
-      }
-  }
+    createCanvas(800, 600);
+    // Create blaster sprite
+    blaster = {
+        x: width/2,
+        y: height/2,
+        display: function() {
+            push();
+            translate(this.x, this.y);
+            rotate(atan2(mouseY - this.y, mouseX - this.x));
+            // Draw blaster
+            fill(200);
+            rect(-20, -10, 40, 20);
+            rect(0, -5, 30, 10);
+            pop();
+        },
+        update: function() {
+            // Smooth follow mouse
+            this.x = lerp(this.x, mouseX, 0.1);
+            this.y = lerp(this.y, mouseY, 0.1);
+        }
+    };
 }
 
 function draw() {
-  background(220);
-
-  if (loading) {
-    drawLoadingScreen();
-    return;
-  }
-
-  image(img, width / 2, height / 2, width, height);
-  updateYogurtBalls();
-  drawSplats();
-  drawBlaster();
-  drawHUD();
-  checkGameOver();
-}
-
-function updateYogurtBalls() {
-  for (let i = yogurtBalls.length - 1; i >= 0; i--) {
-    let ball = yogurtBalls[i];
-    ball.x += ball.speed * cos(ball.angle);
-    ball.y += ball.speed * sin(ball.angle);
-
-    if (ball.x < 0 || ball.x > width || ball.y < 0 || ball.y > height) {
-      yogurtBalls.splice(i, 1);
-      continue;
+    if (!gameOver) {
+        // Draw background
+        image(bgImage, 0, 0, width, height);
+        
+        // Draw splatters
+        for (let splatter of splatters) {
+            fill(255, 255, 255, 180); // Semi-transparent white for yogurt
+            beginShape();
+            for (let point of splatter) {
+                vertex(point.x, point.y);
+            }
+            endShape(CLOSE);
+        }
+        
+        // Update and display blaster
+        blaster.update();
+        blaster.display();
+        
+        // Show remaining shots
+        fill(0);
+        textSize(24);
+        text(`Shots remaining: ${shotsRemaining}`, 20, 30);
     }
-
-    fill(255, 250, 220);
-    noStroke();
-    circle(ball.x, ball.y, 10);
-
-    // Create splat upon impact with target
-    if (checkCollisionWithTarget(ball.x, ball.y)) { //New Collision Detection
-      createSplat(ball.x, ball.y);
-      yogurtBalls.splice(i, 1);
-    }
-  }
-}
-
-function checkCollisionWithTarget(x, y) {
-  return true;
-}
-
-function createSplat(x, y) {
-    if (splats.length > 30) {
-        splats.shift();
-    }
-
-    let newSplat = {
-        x: x,
-        y: y,
-        size: random(5, 10),
-        points: [],
-        alpha: 255,
-        lifespan: 100,
-        pixelsCovered: Math.floor(totalPixels * 0.02)
-    };
-    
-    let pixelsCovered = 0;
-    while (pixelsCovered < newSplat.pixelsCovered) {
-      let pointX = Math.floor(random(newSplat.x - newSplat.size, newSplat.x + newSplat.size));
-      let pointY = Math.floor(random(newSplat.y - newSplat.size, newSplat.y + newSplat.size));
-      if(pointX >= 0 && pointX < width && pointY >= 0 && pointY < height && !coveredPixels[pointX][pointY]){
-        coveredPixels[pointX][pointY] = true;
-        pixelsCovered++
-      }
-    }
-
-    let numPoints = floor(random(5, 8));
-    for (let i = 0; i < numPoints; i++) {
-      newSplat.points.push({
-        angle: (TWO_PI / numPoints) * i,
-        rad: random(0.8, 1.2)
-      });
-    }
-
-    splats.push(newSplat);
-}
-
-function drawSplats() {
-  for (let i = splats.length - 1; i >= 0; i--) {
-    let splat = splats[i];
-    splat.lifespan--;
-
-    if (splat.lifespan <= 0) {
-        splats.splice(i, 1);
-    } else {
-      push();
-      translate(splat.x, splat.y);
-      fill(255, 250, 220, splat.alpha);
-      noStroke();
-
-      beginShape();
-      for (let j = 0; j <= splat.points.length; j++) {
-        let point = splat.points[j % splat.points.length];
-        let rad = splat.size * point.rad;
-        let x = cos(point.angle) * rad;
-        let y = sin(point.angle) * rad;
-        curveVertex(x, y);
-      }
-      endShape(CLOSE);
-      pop();
-    }
-  }
 }
 
 function mousePressed() {
-  if (!gameOver && !loading && shotsLeft > 0) {
-    yogurtBalls.push({
-      x: blaster.x, // Start from the blaster's position
-      y: blaster.y,
-      angle: blaster.angle,
-      speed: 10
-    });
-    shotsLeft--;
-  }
+    if (!gameOver && shotsRemaining > 0) {
+        // Create new splatter
+        let splatterPoints = [];
+        let centerX = mouseX;
+        let centerY = mouseY;
+        let points = random(8, 12);
+        
+        // Generate irregular shape
+        for (let i = 0; i < points; i++) {
+            let angle = map(i, 0, points, 0, TWO_PI);
+            let radius = random(20, 50); // Controls splatter size
+            let x = centerX + cos(angle) * radius;
+            let y = centerY + sin(angle) * radius;
+            splatterPoints.push({x, y});
+        }
+        
+        splatters.push(splatterPoints);
+        shotsRemaining--;
+        
+        if (shotsRemaining === 0) {
+            gameOver = true;
+            setTimeout(() => {
+                if (confirm('Game Over! Play again?')) {
+                    resetGame();
+                }
+            }, 500);
+        }
+    }
 }
 
-function mouseMoved() {
-  if (!gameOver) {
-    // Smooth following of mouse
-    blaster.x = mouseX;
-    blaster.y = mouseY;
-    blaster.angle = atan2(mouseY - blaster.y, mouseX - blaster.x);
-  }
-}
-
-function drawBlaster() {
-  push();
-  translate(blaster.x, blaster.y);
-  rotate(blaster.angle);
-  fill(blaster.color);
-  noStroke();
-  rect(-blaster.size / 2, -blaster.size / 4, blaster.size, blaster.size / 2);
-  pop();
-}
-
-function drawHUD() {
-  fill(0);
-  noStroke();
-  textSize(20);
-  textAlign(LEFT);
-  text(`Shots Left: ${shotsLeft}`, 10, 30);
-}
-
-function drawLoadingScreen() {
-  fill(0);
-  noStroke();
-  textSize(30);
-  textAlign(CENTER, CENTER);
-  text('Loading...', width / 2, height / 2);
-}
-
-function checkGameOver() {
-  if (shotsLeft <= 0 && yogurtBalls.length === 0) {
-    gameOver = true;
-
-    fill(0, 0, 0, 150);
-    rect(0, 0, width, height);
-
-    fill(255);
-    textSize(40);
-    textAlign(CENTER, CENTER);
-    text('Game Over!', width / 2, height / 2);
-  }
+function resetGame() {
+    splatters = [];
+    shotsRemaining = 10;
+    gameOver = false;
 }
