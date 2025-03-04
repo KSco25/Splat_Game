@@ -23,8 +23,8 @@
     let shotsFired = 0;
     let gameState = 'playing';
     let splatters = [];
-    let splatterCoverageMin = 0.02; // 2%
-    let splatterCoverageMax = 0.05; // 5%
+    let splatterCoverageMin = 0.01; // 1% - Smaller splatters
+    let splatterCoverageMax = 0.03; // 3% - Smaller splatters
     let maxShots = 10;
 
     function preload() {
@@ -118,7 +118,7 @@
 
       splatters.push({
         points: splatterPoints,
-        color: color(255, 250, 240, 200) // Creamy yogurt color, slightly transparent
+        color: color(255, 248, 220, 230) // Creamy Yogurt Color - more opaque and slightly off-white
       });
     }
 
