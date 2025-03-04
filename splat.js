@@ -82,7 +82,8 @@ const YogurtBlasterGame = () => {
   };
 
   const shootYogurt = (p5) => {
-    if (blasterRef.current.shots >= 10) {
+    // Change shots limit from 10 to 5
+    if (blasterRef.current.shots >= 5) {
       blasterRef.current.gameOver = true;
       return;
     }
