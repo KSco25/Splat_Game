@@ -7,14 +7,27 @@ const YogurtBlasterGame = () => {
     y: 0,
     shots: 0,
     gameOver: false,
-    splatters: []
+    splatters: [],
+    backgroundImage: null,
+    loading: true
   });
 
-  function preload() {
-    img = loadImage('target.jpg', () => {
-      loading = false;
-    });
-  }
+  const preload = (p5) => {
+    // Load image with proper error handling
+    p5.loadImage('target.jpg', 
+      // Success callback
+      (img) => {
+        blasterRef.current.backgroundImage = img;
+        blasterRef.current.loading = false;
+      },
+      // Error callback
+      (err) => {
+        console.error('Error loading image:', err);
+        blasterRef.current.loading = false;
+      }
+    );
+  };
+
   const setup = (p5, canvasParentRef) => {
     const canvas = p5.createCanvas(600, 400);
     canvas.parent(canvasParentRef);
@@ -96,8 +109,20 @@ const YogurtBlasterGame = () => {
     // Clear the canvas
     p5.clear();
 
-    // Draw simulated background
-    p5.image(blasterRef.current.backgroundImage, 0, 0);
+    // Check if image is loaded
+    if (blasterRef.current.loading) {
+      p5.background(200);
+      p5.fill(0);
+      p5.textSize(20);
+      p5.textAlign(p5.CENTER, p5.CENTER);
+      p5.text('Loading...', p5.width/2, p5.height/2);
+      return;
+    }
+
+    // Draw background if image is loaded
+    if (blasterRef.current.backgroundImage) {
+      p5.image(blasterRef.current.backgroundImage, 0, 0, p5.width, p5.height);
+    }
 
     // Update blaster position to mouse
     blasterRef.current.x = p5.mouseX;
