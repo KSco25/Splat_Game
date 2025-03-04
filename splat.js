@@ -1,172 +1,139 @@
-const YogurtBlasterGame = () => {
-  const blasterRef = useRef({
-    x: 0,
-    y: 0,
-    shots: 0,
-    gameOver: false,
-    splatters: [],
-    backgroundImage: null,
-    loading: true
+let backgroundImage;
+let blaster;
+let shotsFired = 0;
+let gameState = 'playing';
+let splatters = [];
+let splatterCoverageMin = 0.02; // 2%
+let splatterCoverageMax = 0.05; // 5%
+let maxShots = 10;
+
+function preload() {
+  backgroundImage = loadImage('your_image.jpg'); // Replace 'your_image.jpg' with your image file name
+}
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  blaster = createBlaster();
+}
+
+function draw() {
+  background(backgroundImage);
+
+  if (gameState === 'playing') {
+    updateBlasterPosition();
+    drawBlaster();
+    drawSplatters();
+    displayShotCount();
+
+    if (shotsFired >= maxShots) {
+      gameState = 'gameOver';
+    }
+  } else if (gameState === 'gameOver') {
+    displayGameOverScreen();
+  }
+}
+
+function mousePressed() {
+  if (gameState === 'playing') {
+    shootYogurt();
+  } else if (gameState === 'gameOver') {
+    resetGame();
+  }
+}
+
+function createBlaster() {
+  return {
+    x: mouseX,
+    y: mouseY,
+    size: 40,
+    color: color(50, 50, 50), // Dark grey blaster
+    accentColor: color(200, 200, 200) // Light grey accent
+  };
+}
+
+function updateBlasterPosition() {
+  blaster.x = mouseX;
+  blaster.y = mouseY;
+}
+
+function drawBlaster() {
+  push();
+  translate(blaster.x, blaster.y);
+
+  // Main body
+  fill(blaster.color);
+  rectMode(CENTER);
+  rect(0, 0, blaster.size, blaster.size / 2, 5);
+
+  // Barrel
+  fill(blaster.accentColor);
+  rect(blaster.size / 2, 0, blaster.size / 3, blaster.size / 8, 2);
+
+  // Handle
+  fill(blaster.color);
+  arc(-blaster.size / 4, blaster.size / 4, blaster.size / 2, blaster.size / 2, 0, PI);
+
+  pop();
+}
+
+function shootYogurt() {
+  shotsFired++;
+  createSplatter(blaster.x, blaster.y);
+}
+
+function createSplatter(x, y) {
+  let splatterSizePercentage = random(splatterCoverageMin, splatterCoverageMax);
+  let splatterArea = width * height * splatterSizePercentage;
+  let splatterRadius = sqrt(splatterArea / PI); // Approximate radius for irregular shape
+
+  let splatterPoints = [];
+  let numPoints = 20; // Number of points to define the irregular shape
+  for (let i = 0; i < numPoints; i++) {
+    let angle = map(i, 0, numPoints, 0, TWO_PI);
+    let radiusVariation = random(0.5, 1.5); // Vary radius for irregularity
+    let px = x + cos(angle) * splatterRadius * radiusVariation;
+    let py = y + sin(angle) * splatterRadius * radiusVariation;
+    splatterPoints.push(createVector(px, py));
+  }
+
+  splatters.push({
+    points: splatterPoints,
+    color: color(255, 250, 240, 200) // Creamy yogurt color, slightly transparent
   });
+}
 
-  const preload = (p5) => {
-    // Load image with proper error handling
-    p5.loadImage('target.jpg', 
-      // Success callback
-      (img) => {
-        blasterRef.current.backgroundImage = img;
-        blasterRef.current.loading = false;
-      },
-      // Error callback
-      (err) => {
-        console.error('Error loading image:', err);
-        blasterRef.current.loading = false;
-      }
-    );
-  };
-
-  const setup = (p5, canvasParentRef) => {
-    const canvas = p5.createCanvas(600, 400);
-    canvas.parent(canvasParentRef);
-    p5.noStroke();
-  };
-
-  const drawBlaster = (p5) => {
-    // Space blaster sprite
-    p5.push();
-    p5.translate(blasterRef.current.x, blasterRef.current.y);
-    p5.rotate(p5.PI / 4);
-    
-    // Blaster body
-    p5.fill(100, 150, 200);
-    p5.rect(-20, -10, 40, 20, 5);
-    
-    // Blaster barrel
-    p5.fill(80, 120, 180);
-    p5.rect(20, -5, 15, 10);
-    
-    p5.pop();
-  };
-
-  const drawSplatters = (p5) => {
-    blasterRef.current.splatters.forEach(splatter => {
-      p5.push();
-      p5.fill(splatter.color);
-      p5.translate(splatter.x, splatter.y);
-      p5.rotate(splatter.rotation);
-      
-      // Irregular splatter shape
-      p5.beginShape();
-      splatter.points.forEach(pt => {
-        p5.vertex(pt.x, pt.y);
-      });
-      p5.endShape(p5.CLOSE);
-      
-      p5.pop();
-    });
-  };
-
-  const generateSplatterPoints = (p5, x, y) => {
-    const points = [];
-    const numPoints = p5.random(5, 10);
-    for (let i = 0; i < numPoints; i++) {
-      points.push({
-        x: p5.random(-30, 30),
-        y: p5.random(-30, 30)
-      });
+function drawSplatters() {
+  noStroke();
+  for (let splatter of splatters) {
+    fill(splatter.color);
+    beginShape();
+    for (let point of splatter.points) {
+      vertex(point.x, point.y);
     }
-    return points;
-  };
+    endShape(CLOSE);
+  }
+}
 
-  const shootYogurt = (p5) => {
-    // Change shots limit from 10 to 5
-    if (blasterRef.current.shots >= 5) {
-      blasterRef.current.gameOver = true;
-      return;
-    }
+function displayShotCount() {
+  fill(255);
+  textSize(20);
+  textAlign(LEFT, TOP);
+  text(`Shots: ${shotsFired}/${maxShots}`, 10, 10);
+}
 
-    const splatterColor = p5.color(
-      p5.random(200, 255), 
-      p5.random(200, 255), 
-      p5.random(200, 255), 
-      200
-    );
 
-    blasterRef.current.splatters.push({
-      x: blasterRef.current.x,
-      y: blasterRef.current.y,
-      color: splatterColor,
-      rotation: p5.random(0, p5.TWO_PI),
-      points: generateSplatterPoints(p5, blasterRef.current.x, blasterRef.current.y)
-    });
+function displayGameOverScreen() {
+  background(0, 150); // Semi-transparent black overlay
+  fill(255);
+  textSize(32);
+  textAlign(CENTER, CENTER);
+  text("Game Over!", width / 2, height / 2 - 40);
+  textSize(24);
+  text("Click to Play Again", width / 2, height / 2 + 20);
+}
 
-    blasterRef.current.shots++;
-  };
-
-  const draw = (p5) => {
-    // Clear the canvas
-    p5.clear();
-
-    // Check if image is loaded
-    if (blasterRef.current.loading) {
-      p5.background(200);
-      p5.fill(0);
-      p5.textSize(20);
-      p5.textAlign(p5.CENTER, p5.CENTER);
-      p5.text('Loading...', p5.width/2, p5.height/2);
-      return;
-    }
-
-    // Draw background if image is loaded
-    if (blasterRef.current.backgroundImage) {
-      p5.image(blasterRef.current.backgroundImage, 0, 0, p5.width, p5.height);
-    }
-
-    // Update blaster position to mouse
-    blasterRef.current.x = p5.mouseX;
-    blasterRef.current.y = p5.mouseY;
-
-    // Draw existing splatters
-    drawSplatters(p5);
-
-    // Draw blaster
-    drawBlaster(p5);
-
-    // Game over screen
-    if (blasterRef.current.gameOver) {
-      p5.fill(0, 0, 0, 200);
-      p5.rect(0, 0, p5.width, p5.height);
-      p5.fill(255);
-      p5.textSize(32);
-      p5.textAlign(p5.CENTER, p5.CENTER);
-      p5.text('Game Over!\nClick to Play Again', p5.width/2, p5.height/2);
-    }
-  };
-
-  const mousePressed = (p5) => {
-    if (blasterRef.current.gameOver) {
-      // Reset game
-      blasterRef.current.shots = 0;
-      blasterRef.current.splatters = [];
-      blasterRef.current.gameOver = false;
-    } else {
-      // Shoot yogurt
-      shootYogurt(p5);
-    }
-  };
-
-  return (
-    <div className="flex justify-center items-center h-screen bg-gray-100">
-      <div className="border-4 border-blue-500">
-        <Sketch 
-          preload={preload}
-          setup={setup} 
-          draw={draw}
-          mousePressed={mousePressed}
-        />
-      </div>
-    </div>
-  );
-};
-
-export default YogurtBlasterGame;
+function resetGame() {
+  gameState = 'playing';
+  shotsFired = 0;
+  splatters = [];
+}
